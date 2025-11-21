@@ -47,12 +47,16 @@ export function PriceChart({ points }: Props) {
     const closes = points.map((p) => p.close);
     const minVal = Math.min(...closes);
     const maxVal = Math.max(...closes);
-    const range = maxVal - minVal || 1;
+    // Add generous padding to avoid clipping on volatile names; never go below zero.
+    const paddingY = Math.max((maxVal - minVal) * 0.12, maxVal * 0.002, 1);
+    const yMin = Math.max(0, minVal - paddingY);
+    const yMax = maxVal + paddingY;
+    const range = yMax - yMin || 1;
     const stepX = (width - padding * 2) / Math.max(points.length - 1, 1);
 
     const coords = points.map((p, i) => {
       const x = padding + i * stepX;
-      const y = height - padding - ((p.close - minVal) / range) * (height - padding * 2);
+      const y = height - padding - ((p.close - yMin) / range) * (height - padding * 2);
       return { x, y };
     });
 
@@ -60,7 +64,7 @@ export function PriceChart({ points }: Props) {
     const areaPoints = `${line} ${width - padding},${height - padding} ${padding},${height - padding}`;
     const xs = coords.map((c) => c.x);
 
-    return { polyline: line, area: areaPoints, min: minVal, max: maxVal, xPositions: xs };
+    return { polyline: line, area: areaPoints, min: yMin, max: yMax, xPositions: xs };
   }, [points, padding, width, height]);
 
   const activeIndex =
@@ -145,7 +149,7 @@ export function PriceChart({ points }: Props) {
               {/* Axis labels */}
               <text
                 x={padding + 4}
-                y={padding + 4}
+                y={padding + 10}
                 textAnchor="start"
                 className="fill-slate-500 text-[10px]"
               >
@@ -153,7 +157,7 @@ export function PriceChart({ points }: Props) {
               </text>
               <text
                 x={padding + 4}
-                y={height - padding + 12}
+                y={height - padding + 18}
                 textAnchor="start"
                 className="fill-slate-500 text-[10px]"
               >
@@ -161,7 +165,7 @@ export function PriceChart({ points }: Props) {
               </text>
               <text
                 x={padding + 4}
-                y={height - padding + 20}
+                y={height - padding + 24}
                 textAnchor="start"
                 className="fill-slate-500 text-[10px]"
               >
@@ -169,7 +173,7 @@ export function PriceChart({ points }: Props) {
               </text>
               <text
                 x={width - padding - 4}
-                y={height - padding + 20}
+                y={height - padding + 24}
                 textAnchor="end"
                 className="fill-slate-500 text-[10px]"
               >
