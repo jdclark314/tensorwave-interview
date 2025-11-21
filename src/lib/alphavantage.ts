@@ -50,11 +50,27 @@ function toNumber(value?: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+// Returns seconds until the next midnight in US Eastern Time (NYSE clock), with a
+// floor to avoid overly frequent revalidation.
+export function secondsUntilNextETMidnight(minSeconds = 60) {
+  const now = new Date();
+  const nowET = new Date(
+    now.toLocaleString("en-US", { timeZone: "America/New_York" })
+  );
+  const midnightET = new Date(nowET);
+  midnightET.setDate(nowET.getDate() + 1);
+  midnightET.setHours(0, 0, 0, 0);
+  const diffMs = midnightET.getTime() - nowET.getTime();
+  const seconds = Math.ceil(diffMs / 1000);
+  return Math.max(minSeconds, seconds);
+}
+
 async function fetchJson(params: Record<string, string>) {
   const query = new URLSearchParams(params);
+
   const res = await fetch(`${BASE_URL}?${query.toString()}`, {
-    // cache lightly to avoid hammering rate limits while keeping data reasonably fresh
-    next: { revalidate: 300 },
+    // Cache until the next midnight ET; refreshes once per trading day in production.
+    next: { revalidate: secondsUntilNextETMidnight() },
   });
   if (!res.ok) {
     return null;

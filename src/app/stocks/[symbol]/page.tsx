@@ -1,6 +1,9 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { getCompanyOverview, getDailyPrices } from "@/lib/alphavantage";
+import { getLogoUrl } from "@/lib/logos";
+import { PriceChart } from "@/components/PriceChart";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -65,9 +68,17 @@ export default async function StockDetailPage({ params }: StockPageProps) {
     getCompanyOverview(symbol),
     getDailyPrices(symbol),
   ]);
+  const logoUrl = getLogoUrl(symbol);
 
-  const priceHistory = prices?.slice(0, 30) ?? [];
+  const priceHistory = prices?.slice(0, 60) ?? [];
   const missingApiKey = !process.env.ALPHAVANTAGE_API_KEY;
+  const chartPoints = priceHistory
+    .filter((entry) => entry.close !== null)
+    .map((entry) => ({
+      date: entry.date,
+      // non-null asserted because filtered
+      close: entry.close as number,
+    }));
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-50">
@@ -94,6 +105,21 @@ export default async function StockDetailPage({ params }: StockPageProps) {
                 Company Overview
               </p>
               <div className="flex flex-wrap items-center gap-3">
+                {logoUrl ? (
+                  <div className="relative h-12 w-12 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80">
+                    <Image
+                      src={logoUrl}
+                      alt={`${symbol} logo`}
+                      fill
+                      sizes="48px"
+                      className="object-contain p-2"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900/80 text-lg font-semibold text-slate-100">
+                    {symbol.slice(0, 2)}
+                  </div>
+                )}
                 <span className="rounded-lg bg-indigo-500/15 px-3 py-1 text-sm font-semibold text-indigo-100 ring-1 ring-indigo-500/30">
                   {symbol}
                 </span>
@@ -127,7 +153,7 @@ export default async function StockDetailPage({ params }: StockPageProps) {
                 Historical Prices (Daily)
               </p>
               <p className="text-sm text-slate-400">
-                Close, volume, and % change vs. previous trading day. Showing up to 30 most recent.
+                Close, volume, and % change vs. previous trading day. Showing up to 60 most recent.
               </p>
             </div>
             <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-200">
@@ -143,56 +169,110 @@ export default async function StockDetailPage({ params }: StockPageProps) {
                 : "Try again after the API request succeeds."}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] divide-y divide-slate-800 text-sm">
-                <thead className="bg-slate-900/60 text-slate-300">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
-                      Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
-                      Close
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
-                      Volume
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
-                      % Change
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800">
-                  {priceHistory.map((entry) => {
-                    const changeClass =
-                      entry.changePct === null
-                        ? "text-slate-200"
-                        : entry.changePct >= 0
-                        ? "text-emerald-300"
-                        : "text-rose-300";
-                    return (
-                      <tr key={entry.date} className="transition hover:bg-slate-800/60">
-                        <td className="whitespace-nowrap px-6 py-4 text-slate-100">
+            <>
+              <div className="px-6 py-6">
+                <PriceChart points={chartPoints} />
+              </div>
+
+              <div className="grid gap-3 px-6 py-6 sm:hidden">
+                {priceHistory.map((entry) => {
+                  const changeClass =
+                    entry.changePct === null
+                      ? "text-slate-200"
+                      : entry.changePct >= 0
+                      ? "text-emerald-300"
+                      : "text-rose-300";
+                  return (
+                    <div
+                      key={entry.date}
+                      className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-slate-50">
                           {formatDate(entry.date)}
-                        </td>
-                        <td className="px-6 py-4 text-slate-100">
-                          {entry.close !== null
-                            ? currencyFormatter.format(entry.close)
-                            : "N/A"}
-                        </td>
-                        <td className="px-6 py-4 text-slate-300">
-                          {entry.volume !== null
-                            ? numberFormatter.format(entry.volume)
-                            : "N/A"}
-                        </td>
-                        <td className={`px-6 py-4 font-semibold ${changeClass}`}>
+                        </p>
+                        <span className={`text-sm font-semibold ${changeClass}`}>
                           {formatChange(entry.changePct)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </span>
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-3 text-sm text-slate-300">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.08em] text-slate-400">
+                            Close
+                          </p>
+                          <p className="text-slate-100">
+                            {entry.close !== null
+                              ? currencyFormatter.format(entry.close)
+                              : "N/A"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.08em] text-slate-400">
+                            Volume
+                          </p>
+                          <p className="text-slate-100">
+                            {entry.volume !== null
+                              ? numberFormatter.format(entry.volume)
+                              : "N/A"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="hidden overflow-x-auto sm:block">
+                <table className="w-full min-w-[720px] divide-y divide-slate-800 text-sm">
+                  <thead className="bg-slate-900/60 text-slate-300">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+                        Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+                        Close
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+                        Volume
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+                        % Change
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {priceHistory.map((entry) => {
+                      const changeClass =
+                        entry.changePct === null
+                          ? "text-slate-200"
+                          : entry.changePct >= 0
+                          ? "text-emerald-300"
+                          : "text-rose-300";
+                      return (
+                        <tr key={entry.date} className="transition hover:bg-slate-800/60">
+                          <td className="whitespace-nowrap px-6 py-4 text-slate-100">
+                            {formatDate(entry.date)}
+                          </td>
+                          <td className="px-6 py-4 text-slate-100">
+                            {entry.close !== null
+                              ? currencyFormatter.format(entry.close)
+                              : "N/A"}
+                          </td>
+                          <td className="px-6 py-4 text-slate-300">
+                            {entry.volume !== null
+                              ? numberFormatter.format(entry.volume)
+                              : "N/A"}
+                          </td>
+                          <td className={`px-6 py-4 font-semibold ${changeClass}`}>
+                            {formatChange(entry.changePct)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </section>
       </div>

@@ -1,4 +1,7 @@
 import Link from "next/link";
+import Image from "next/image";
+
+import { getLogoUrl } from "@/lib/logos";
 
 type Stock = {
   symbol: string;
@@ -34,12 +37,8 @@ export default function Home() {
             Watchlist preview
           </p>
           <h1 className="text-3xl font-semibold leading-tight sm:text-4xl">
-            Market pulse: 15 tickers to explore
+            Market Pulse: 15 tickers to explore
           </h1>
-          <p className="max-w-3xl text-sm text-slate-300 sm:text-base">
-            Static list for now; we&apos;ll wire AlphaVantage company overviews and prices next.
-            Click any ticker to jump into its detail view.
-          </p>
         </header>
 
         <section className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60 shadow-2xl shadow-indigo-500/10 backdrop-blur">
@@ -49,7 +48,50 @@ export default function Home() {
               {stocks.length} tickers
             </span>
           </div>
-          <div className="overflow-x-auto">
+          <div className="grid gap-3 p-4 sm:hidden">
+            {stocks.map((stock) => (
+              <Link
+                key={stock.symbol}
+                href={`/stocks/${stock.symbol}`}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3 transition hover:border-indigo-500/50 hover:bg-slate-900/80"
+              >
+                <div className="flex items-center gap-3">
+                  {getLogoUrl(stock.symbol) ? (
+                    <div className="relative h-9 w-9 overflow-hidden rounded-full border border-slate-800 bg-slate-800/70">
+                      <Image
+                        src={getLogoUrl(stock.symbol) as string}
+                        alt={`${stock.name} logo`}
+                        fill
+                        sizes="36px"
+                        className="object-contain p-1"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-800 bg-slate-800/70 text-xs font-semibold text-slate-200">
+                      {stock.symbol.slice(0, 2)}
+                    </div>
+                  )}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-slate-50">{stock.symbol}</span>
+                      <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-indigo-200 ring-1 ring-indigo-500/30">
+                        Open
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-200">{stock.name}</p>
+                    <p className="text-xs text-slate-400">
+                      {stock.exchange} · {stock.sector}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-semibold uppercase tracking-wide text-indigo-200">
+                  Details →
+                </span>
+              </Link>
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto sm:block">
             <table className="w-full min-w-[720px] divide-y divide-slate-800 text-sm sm:text-base">
               <thead className="bg-slate-900/60 text-slate-300">
                 <tr>
@@ -81,7 +123,26 @@ export default function Home() {
                         </span>
                       </Link>
                     </td>
-                    <td className="px-6 py-4 text-slate-100">{stock.name}</td>
+                    <td className="px-6 py-4 text-slate-100">
+                      <div className="flex items-center gap-3">
+                        {getLogoUrl(stock.symbol) ? (
+                          <div className="relative h-8 w-8 overflow-hidden rounded-full border border-slate-800 bg-slate-800/70">
+                            <Image
+                              src={getLogoUrl(stock.symbol) as string}
+                              alt={`${stock.name} logo`}
+                              fill
+                              sizes="32px"
+                              className="object-contain"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-800 bg-slate-800/70 text-xs font-semibold text-slate-200">
+                            {stock.symbol.slice(0, 2)}
+                          </div>
+                        )}
+                        <span>{stock.name}</span>
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-slate-300">{stock.exchange}</td>
                     <td className="px-6 py-4 text-slate-300">{stock.sector}</td>
                   </tr>
@@ -90,10 +151,6 @@ export default function Home() {
             </table>
           </div>
         </section>
-
-        <p className="text-xs text-slate-400">
-          You&apos;ll add your API key as ALPHAVANTAGE_API_KEY in .env.local; we&apos;ll plug that into real data next.
-        </p>
       </div>
     </main>
   );
