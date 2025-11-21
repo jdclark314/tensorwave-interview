@@ -20,7 +20,7 @@ function formatField(value: string | number | null | undefined) {
 
 function formatMarketCap(value: string | number | null | undefined) {
   const numeric = typeof value === "number" ? value : value ? Number(value) : null;
-  if (!Number.isFinite(numeric)) return "N/A";
+  if (numeric === null || !Number.isFinite(numeric)) return "N/A";
   return currencyFormatter.format(numeric);
 }
 
